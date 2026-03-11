@@ -1,66 +1,88 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>AR Clock Final</title>
+    
+    <!-- Подключаем локальные файлы, которые ты загрузил в GitHub -->
     <script src="./aframe.min.js"></script>
     <script src="./mindar.js"></script>
+
     <style>
-      body { margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidden; background: #000; }
+      body { margin: 0; overflow: hidden; background: #000; width: 100vw; height: 100vh; }
       #ui {
-        position: absolute; top: 20px; left: 20px; z-index: 9999;
-        color: #fff; background: rgba(0,0,0,0.8); padding: 15px; border-radius: 10px;
-        font-family: Arial, sans-serif; pointer-events: none;
+        position: fixed; top: 20px; left: 20px; z-index: 1000;
+        color: white; font-family: Arial, sans-serif; background: rgba(0,0,0,0.7);
+        padding: 15px; border-radius: 10px; pointer-events: none;
       }
-      /* Принудительно растягиваем контейнеры A-Frame */
-      .a-canvas { width: 100% !important; height: 100% !important; top: 0 !important; left: 0 !important; position: absolute !important; }
-      video { width: 100% !important; height: 100% !important; object-fit: cover !important; position: absolute !important; top: 0 !important; left: 0 !important; }
+      /* Фикс для полноэкранного видео */
+      video { width: 100% !important; height: 100% !important; object-fit: cover !important; position: absolute !important; top: 0; left: 0; }
     </style>
   </head>
   <body>
-    <div id="ui">СТАТУС: ЗАГРУЗКА...</div>
+    
+    <div id="ui">СТАТУС: ЗАГРУЗКА БИБЛИОТЕК...</div>
 
     <a-scene 
       mindar-image="imageTargetSrc: ./targets.mind; autoStart: true; uiScanning: yes; uiLoading: no;" 
       embedded 
+      renderer="colorManagement: true, physicallyCorrectLights" 
       vr-mode-ui="enabled: false" 
       device-orientation-permission-ui="enabled: false">
       
       <a-assets>
+        <!-- Твоя модель -->
         <a-asset-item id="clockModel" src="./clock-animation.glb"></a-asset-item>
       </a-assets>
 
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
+      <!-- ТАРГЕТ С ID="target" (критически важно для скрипта) -->
       
-        <!-- ЯРКИЙ ТЕСТОВЫЙ КУБ -->
-        <a-box color="#FF0000" position="0 0 0.1" scale="0.3 0.3 0.3"></a-box>
-        <!-- ТВОЯ МОДЕЛЬ -->
+        <!-- КРАСНЫЙ КУБ ДЛЯ ТЕСТА -->
+        <a-box color="red" position="0 0 0.1" scale="0.2 0.2 0.2"></a-box>
+        
+        <!-- МОДЕЛЬ (увеличил масштаб для верности) -->
         <a-gltf-model src="#clockModel" position="0 0 0" scale="1 1 1"></a-gltf-model>
       
 
-      <a-light type="ambient" intensity="1.5"></a-light>
+      <a-light type="ambient" intensity="1.2"></a-light>
+      <a-light type="directional" position="0 1 1" intensity="0.5"></a-light>
     </a-scene>
 
     <script>
-      const ui = document.getElementById('ui');
-      const sceneEl = document.querySelector('a-scene');
+      // Ждем полной загрузки DOM, чтобы не было ошибки "null"
+      window.onload = () => {
+        const ui = document.getElementById('ui');
+        const sceneEl = document.querySelector('a-scene');
+        const targetEl = document.querySelector('#target');
 
-      // Проверка: загрузился ли файл .mind?
-      sceneEl.addEventListener("arReady", () => { ui.innerText = "ИЩУ ЧАСЫ..."; });
-      sceneEl.addEventListener("arError", (e) => { ui.innerText = "ОШИБКА КАМЕРЫ"; });
+        ui.innerText = "ИЩУ ЧАСЫ (НАВЕДИТЕ КАМЕРУ)...";
 
-      const targetEl = document.querySelector('#target');
-      targetEl.addEventListener("targetFound", () => {
-        ui.innerText = "ЕСТЬ КОНТАКТ!";
-        ui.style.background = "green";
-      });
-      targetEl.addEventListener("targetLost", () => {
-        ui.innerText = "ПОТЕРЯНО. НАВЕДИТЕ СНОВА";
-        ui.style.background = "rgba(0,0,0,0.8)";
-      });
+        // Если камера включилась
+        sceneEl.addEventListener("arReady", () => {
+          console.log("MindAR готов");
+        });
 
-      // Хак для принудительного ресайза при старте
-      window.onload = () => { window.dispatchEvent(new Event('resize')); };
+        // Если возникла ошибка
+        sceneEl.addEventListener("arError", () => {
+          ui.innerText = "ОШИБКА: КАМЕРА НЕ ДОСТУПНА";
+          ui.style.background = "red";
+        });
+
+        // Обработка нахождения цели
+        if (targetEl) {
+          targetEl.addEventListener("targetFound", () => {
+            ui.innerText = "ЕСТЬ КОНТАКТ! МОДЕЛЬ ЗАГРУЖЕНА";
+            ui.style.background = "green";
+          });
+
+          targetEl.addEventListener("targetLost", () => {
+            ui.innerText = "ПОТЕРЯНО. ИЩУ СНОВА...";
+            ui.style.background = "rgba(0,0,0,0.7)";
+          });
+        }
+      };
     </script>
   </body>
 </html>
