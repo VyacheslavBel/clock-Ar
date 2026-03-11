@@ -1,0 +1,27 @@
+!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- Подключаем AR движок (бесплатно) -->
+    <script src="https://aframe.io"></script>
+    <script src="https://cdn.jsdelivr.net"></script>
+  </head>
+  <body>
+    <!-- Подключаем твой файл маркера -->
+    <a-scene mindar-image="imageTargetSrc: ./targets.mind;" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
+      
+      <a-assets>
+        <!-- Твоя 3D модель (меняй этот файл каждый месяц) -->
+        <a-asset-item id="myModel" src="./clock-animation.glb"></a-asset-item>
+      </a-assets>
+
+      <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
+      <!-- targetIndex: 0 — это твои часы -->
+      
+        <!-- Настройки модели: position (x y z), scale (размер), rotation -->
+        <a-gltf-model src="#myModel" position="0 0 0" scale="0.1 0.1 0.1" rotation="0 0 0"></a-gltf-model>
+      
+      
+    </a-scene>
+  </body>
