@@ -2,59 +2,66 @@
 <html>
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AR Clock Project</title>
-    
+    <!-- Подключаем твои локальные файлы библиотек -->
     <script src="./aframe.min.js"></script>
-  <script src="./mindar.js"></script>
+    <script src="./mindar.js"></script>
     <style>
       body { margin: 0; background: #000; overflow: hidden; }
-      /* Текст, который покажет, что страница жива */
-      #loading {
-        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-        background: #000; color: #fff; display: flex;
-        align-items: center; justify-content: center; z-index: 999;
-        font-family: sans-serif;
+      #ui {
+        position: fixed; top: 10px; left: 10px; z-index: 999;
+        color: white; font-family: sans-serif; background: rgba(0,0,0,0.5); padding: 10px;
       }
     </style>
   </head>
   <body>
-    <div id="loading">ЗАГРУЗКА КАМЕРЫ И AR...</div>
+    <div id="ui">Наведите камеру на циферблат часов</div>
 
-    <!-- Сцена: указываем путь к твоему файлу .mind -->
+    <!-- Сцена с твоим маркером -->
     <a-scene 
-      mindar-image="imageTargetSrc: ./targets.mind;" 
+      mindar-image="imageTargetSrc: ./targets.mind; autoStart: true; uiLoading: no; uiError: yes; uiScanning: yes;" 
+      color-space="sRGB" 
+      renderer="colorManagement: true, physicallyCorrectLights" 
       vr-mode-ui="enabled: false" 
       device-orientation-permission-ui="enabled: false">
       
       <a-assets>
-        <!-- Твоя 3D модель в формате .glb -->
+        <!-- Твоя модель -->
         <a-asset-item id="clockModel" src="./clock-animation.glb"></a-asset-item>
       </a-assets>
 
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-      <!-- Контейнер, который привязан к твоим часам (targetIndex: 0) -->
+      <!-- Основной контейнер AR -->
       
+        
+        <!-- 1. ТЕСТОВЫЙ КРАСНЫЙ КУБ (удалим потом, когда увидим модель) -->
+        <a-box color="red" position="0 0 0.1" scale="0.2 0.2 0.2"></a-box>
+
+        <!-- 2. ТВОЯ МОДЕЛЬ (увеличил масштаб до 1 1 1 для видимости) -->
         <a-gltf-model 
           src="#clockModel" 
           position="0 0 0" 
-          scale="0.1 0.1 0.1" 
+          scale="1 1 1" 
           rotation="0 0 0">
         </a-gltf-model>
+
       
+
+      <!-- Добавляем свет, чтобы модель была видна -->
+      <a-light type="ambient" intensity="1"></a-light>
+      <a-light type="directional" position="0 1 1" intensity="0.5"></a-light>
+
     </a-scene>
 
     <script>
-      // Скрываем надпись загрузки, когда AR-движок готов
-      const sceneEl = document.querySelector('a-scene');
-      sceneEl.addEventListener("arReady", (event) => {
-        document.getElementById('loading').style.display = 'none';
+      // Смена текста при нахождении цели
+      const target = document.querySelector('[mindar-image-target]');
+      target.addEventListener("targetFound", event => {
+        document.getElementById('ui').innerText = "ЧАСЫ НАЙДЕНЫ! СМОТРИТЕ АНИМАЦИЮ";
       });
-      // Если возникла ошибка (например, камера запрещена)
-      sceneEl.addEventListener("arError", (event) => {
-        document.getElementById('loading').innerText = "Ошибка: разрешите доступ к камере";
+      target.addEventListener("targetLost", event => {
+        document.getElementById('ui').innerText = "ПОТЕРЯНО. НАВЕДИТЕ СНОВА";
       });
     </script>
   </body>
 </html>
-
