@@ -1,66 +1,76 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Подключаем твои локальные файлы библиотек -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>AR Clock Project</title>
+    
+    <!-- Подключаем твои локальные файлы -->
     <script src="./aframe.min.js"></script>
     <script src="./mindar.js"></script>
+
     <style>
-      body { margin: 0; background: #000; overflow: hidden; }
+      body { margin: 0; overflow: hidden; background: #000; }
+      /* Убираем все лишние кнопки браузера */
+      .a-enter-vr, .a-enter-ar { display: none !important; }
       #ui {
-        position: fixed; top: 10px; left: 10px; z-index: 999;
-        color: white; font-family: sans-serif; background: rgba(0,0,0,0.5); padding: 10px;
+        position: fixed; top: 10px; left: 10px; z-index: 1000;
+        color: white; font-family: sans-serif; background: rgba(0,0,0,0.6);
+        padding: 10px; border-radius: 5px; pointer-events: none;
       }
     </style>
   </head>
   <body>
-    <div id="ui">Наведите камеру на циферблат часов</div>
+    <div id="ui">СТАТУС: ИНИЦИАЛИЗАЦИЯ...</div>
 
-    <!-- Сцена с твоим маркером -->
+    <!-- Сцена с жесткими настройками (БЕЗ VR) -->
     <a-scene 
-      mindar-image="imageTargetSrc: ./targets.mind; autoStart: true; uiLoading: no; uiError: yes; uiScanning: yes;" 
+      mindar-image="imageTargetSrc: ./targets.mind; autoStart: true; uiScanning: yes; uiLoading: no;" 
+      embedded
       color-space="sRGB" 
       renderer="colorManagement: true, physicallyCorrectLights" 
       vr-mode-ui="enabled: false" 
       device-orientation-permission-ui="enabled: false">
       
       <a-assets>
-        <!-- Твоя модель -->
         <a-asset-item id="clockModel" src="./clock-animation.glb"></a-asset-item>
       </a-assets>
 
-      <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+      <a-camera position="0 0 0" look-controls="enabled: false" cursor="fuse: false; rayOrigin: mouse;" raycaster="far: 10000; objects: .clickable"></a-camera>
 
-      <!-- Основной контейнер AR -->
+      <!-- Твои часы -->
       
-        
-        <!-- 1. ТЕСТОВЫЙ КРАСНЫЙ КУБ (удалим потом, когда увидим модель) -->
+        <!-- ТЕСТОВЫЙ КРАСНЫЙ КУБ (чтобы проверить трекинг) -->
         <a-box color="red" position="0 0 0.1" scale="0.2 0.2 0.2"></a-box>
-
-        <!-- 2. ТВОЯ МОДЕЛЬ (увеличил масштаб до 1 1 1 для видимости) -->
+        
         <a-gltf-model 
           src="#clockModel" 
           position="0 0 0" 
-          scale="1 1 1" 
-          rotation="0 0 0">
+          scale="1 1 1">
         </a-gltf-model>
-
       
 
-      <!-- Добавляем свет, чтобы модель была видна -->
       <a-light type="ambient" intensity="1"></a-light>
-      <a-light type="directional" position="0 1 1" intensity="0.5"></a-light>
-
     </a-scene>
 
     <script>
-      // Смена текста при нахождении цели
-      const target = document.querySelector('[mindar-image-target]');
-      target.addEventListener("targetFound", event => {
-        document.getElementById('ui').innerText = "ЧАСЫ НАЙДЕНЫ! СМОТРИТЕ АНИМАЦИЮ";
+      const ui = document.getElementById('ui');
+      const sceneEl = document.querySelector('a-scene');
+
+      // Проверка готовности системы
+      sceneEl.addEventListener("arReady", () => {
+        ui.innerText = "КАМЕРА ОК. НАВЕДИТЕ НА ЧАСЫ";
       });
-      target.addEventListener("targetLost", event => {
-        document.getElementById('ui').innerText = "ПОТЕРЯНО. НАВЕДИТЕ СНОВА";
+
+      // Событие нахождения часов
+      const targetEl = document.querySelector('#target');
+      targetEl.addEventListener("targetFound", () => {
+        ui.innerText = "ЧАСЫ НАЙДЕНЫ!";
+        ui.style.background = "green";
+      });
+
+      targetEl.addEventListener("targetLost", () => {
+        ui.innerText = "ПОТЕРЯНО. ИЩУ ЧАСЫ...";
+        ui.style.background = "rgba(0,0,0,0.6)";
       });
     </script>
   </body>
