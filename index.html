@@ -1,35 +1,27 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>AR Clock Fix</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <script src="./aframe.min.js"></script>
     <script src="./mindar.js"></script>
     <style>
-      /* Убираем все отступы и черноту */
-      body { margin: 0; overflow: hidden; background: #000; width: 100vw; height: 100vh; }
-      
-      /* Заставляем видео и сцену занять ВЕСЬ экран */
-      .mindar-ui-overlay { z-index: 10; }
-      a-scene { width: 100%; height: 100%; }
-      
-      /* Наш индикатор сверху */
+      body { margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidden; background: #000; }
       #ui {
-        position: fixed; top: 10px; left: 10px; z-index: 1000;
-        color: white; font-family: sans-serif; background: rgba(0,0,0,0.7);
-        padding: 8px 15px; border-radius: 20px; pointer-events: none;
-        font-size: 14px;
+        position: absolute; top: 20px; left: 20px; z-index: 9999;
+        color: #fff; background: rgba(0,0,0,0.8); padding: 15px; border-radius: 10px;
+        font-family: Arial, sans-serif; pointer-events: none;
       }
+      /* Принудительно растягиваем контейнеры A-Frame */
+      .a-canvas { width: 100% !important; height: 100% !important; top: 0 !important; left: 0 !important; position: absolute !important; }
+      video { width: 100% !important; height: 100% !important; object-fit: cover !important; position: absolute !important; top: 0 !important; left: 0 !important; }
     </style>
   </head>
   <body>
-    <div id="ui">СТАТУС: ПОИСК КАМЕРЫ...</div>
+    <div id="ui">СТАТУС: ЗАГРУЗКА...</div>
 
-    <!-- Добавили свойство inspector="url: ..." чтобы не грузило лишнего -->
     <a-scene 
-      mindar-image="imageTargetSrc: ./targets.mind; autoStart: true; uiScanning: yes; uiLoading: no; filterMinCF:0.001; filterBeta: 0.01;" 
-      embedded
-      renderer="colorManagement: true, physicallyCorrectLights" 
+      mindar-image="imageTargetSrc: ./targets.mind; autoStart: true; uiScanning: yes; uiLoading: no;" 
+      embedded 
       vr-mode-ui="enabled: false" 
       device-orientation-permission-ui="enabled: false">
       
@@ -39,16 +31,11 @@
 
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-      <!-- Тестовый объект (красный куб) + твоя модель -->
       
-        <!-- КУБ ВЫНЕСЕН ВПЕРЕД (Z=0.2) ЧТОБЫ БЫЛО ВИДНО -->
-        <a-box color="red" position="0 0 0.2" scale="0.3 0.3 0.3"></a-box>
-        
-        <a-gltf-model 
-          src="#clockModel" 
-          position="0 0 0" 
-          scale="1 1 1">
-        </a-gltf-model>
+        <!-- ЯРКИЙ ТЕСТОВЫЙ КУБ -->
+        <a-box color="#FF0000" position="0 0 0.1" scale="0.3 0.3 0.3"></a-box>
+        <!-- ТВОЯ МОДЕЛЬ -->
+        <a-gltf-model src="#clockModel" position="0 0 0" scale="1 1 1"></a-gltf-model>
       
 
       <a-light type="ambient" intensity="1.5"></a-light>
@@ -58,17 +45,22 @@
       const ui = document.getElementById('ui');
       const sceneEl = document.querySelector('a-scene');
 
-      sceneEl.addEventListener("arReady", () => { ui.innerText = "КАМЕРА OK. ИЩУ ЧАСЫ..."; });
-      
+      // Проверка: загрузился ли файл .mind?
+      sceneEl.addEventListener("arReady", () => { ui.innerText = "ИЩУ ЧАСЫ..."; });
+      sceneEl.addEventListener("arError", (e) => { ui.innerText = "ОШИБКА КАМЕРЫ"; });
+
       const targetEl = document.querySelector('#target');
       targetEl.addEventListener("targetFound", () => {
-        ui.innerText = "ЧАСЫ НАЙДЕНЫ!";
-        ui.style.background = "#27ae60"; // Зеленый
+        ui.innerText = "ЕСТЬ КОНТАКТ!";
+        ui.style.background = "green";
       });
       targetEl.addEventListener("targetLost", () => {
-        ui.innerText = "ПОТЕРЯНО. НАВЕДИТЕ НА ЦИФЕРБЛАТ";
-        ui.style.background = "rgba(0,0,0,0.7)";
+        ui.innerText = "ПОТЕРЯНО. НАВЕДИТЕ СНОВА";
+        ui.style.background = "rgba(0,0,0,0.8)";
       });
+
+      // Хак для принудительного ресайза при старте
+      window.onload = () => { window.dispatchEvent(new Event('resize')); };
     </script>
   </body>
 </html>
