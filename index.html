@@ -2,31 +2,33 @@
 <html>
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>AR Clock Project</title>
-    
-    <!-- Подключаем твои локальные файлы -->
+    <title>AR Clock Fix</title>
     <script src="./aframe.min.js"></script>
     <script src="./mindar.js"></script>
-
     <style>
-      body { margin: 0; overflow: hidden; background: #000; }
-      /* Убираем все лишние кнопки браузера */
-      .a-enter-vr, .a-enter-ar { display: none !important; }
+      /* Убираем все отступы и черноту */
+      body { margin: 0; overflow: hidden; background: #000; width: 100vw; height: 100vh; }
+      
+      /* Заставляем видео и сцену занять ВЕСЬ экран */
+      .mindar-ui-overlay { z-index: 10; }
+      a-scene { width: 100%; height: 100%; }
+      
+      /* Наш индикатор сверху */
       #ui {
         position: fixed; top: 10px; left: 10px; z-index: 1000;
-        color: white; font-family: sans-serif; background: rgba(0,0,0,0.6);
-        padding: 10px; border-radius: 5px; pointer-events: none;
+        color: white; font-family: sans-serif; background: rgba(0,0,0,0.7);
+        padding: 8px 15px; border-radius: 20px; pointer-events: none;
+        font-size: 14px;
       }
     </style>
   </head>
   <body>
-    <div id="ui">СТАТУС: ИНИЦИАЛИЗАЦИЯ...</div>
+    <div id="ui">СТАТУС: ПОИСК КАМЕРЫ...</div>
 
-    <!-- Сцена с жесткими настройками (БЕЗ VR) -->
+    <!-- Добавили свойство inspector="url: ..." чтобы не грузило лишнего -->
     <a-scene 
-      mindar-image="imageTargetSrc: ./targets.mind; autoStart: true; uiScanning: yes; uiLoading: no;" 
+      mindar-image="imageTargetSrc: ./targets.mind; autoStart: true; uiScanning: yes; uiLoading: no; filterMinCF:0.001; filterBeta: 0.01;" 
       embedded
-      color-space="sRGB" 
       renderer="colorManagement: true, physicallyCorrectLights" 
       vr-mode-ui="enabled: false" 
       device-orientation-permission-ui="enabled: false">
@@ -35,12 +37,12 @@
         <a-asset-item id="clockModel" src="./clock-animation.glb"></a-asset-item>
       </a-assets>
 
-      <a-camera position="0 0 0" look-controls="enabled: false" cursor="fuse: false; rayOrigin: mouse;" raycaster="far: 10000; objects: .clickable"></a-camera>
+      <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-      <!-- Твои часы -->
+      <!-- Тестовый объект (красный куб) + твоя модель -->
       
-        <!-- ТЕСТОВЫЙ КРАСНЫЙ КУБ (чтобы проверить трекинг) -->
-        <a-box color="red" position="0 0 0.1" scale="0.2 0.2 0.2"></a-box>
+        <!-- КУБ ВЫНЕСЕН ВПЕРЕД (Z=0.2) ЧТОБЫ БЫЛО ВИДНО -->
+        <a-box color="red" position="0 0 0.2" scale="0.3 0.3 0.3"></a-box>
         
         <a-gltf-model 
           src="#clockModel" 
@@ -49,28 +51,23 @@
         </a-gltf-model>
       
 
-      <a-light type="ambient" intensity="1"></a-light>
+      <a-light type="ambient" intensity="1.5"></a-light>
     </a-scene>
 
     <script>
       const ui = document.getElementById('ui');
       const sceneEl = document.querySelector('a-scene');
 
-      // Проверка готовности системы
-      sceneEl.addEventListener("arReady", () => {
-        ui.innerText = "КАМЕРА ОК. НАВЕДИТЕ НА ЧАСЫ";
-      });
-
-      // Событие нахождения часов
+      sceneEl.addEventListener("arReady", () => { ui.innerText = "КАМЕРА OK. ИЩУ ЧАСЫ..."; });
+      
       const targetEl = document.querySelector('#target');
       targetEl.addEventListener("targetFound", () => {
         ui.innerText = "ЧАСЫ НАЙДЕНЫ!";
-        ui.style.background = "green";
+        ui.style.background = "#27ae60"; // Зеленый
       });
-
       targetEl.addEventListener("targetLost", () => {
-        ui.innerText = "ПОТЕРЯНО. ИЩУ ЧАСЫ...";
-        ui.style.background = "rgba(0,0,0,0.6)";
+        ui.innerText = "ПОТЕРЯНО. НАВЕДИТЕ НА ЦИФЕРБЛАТ";
+        ui.style.background = "rgba(0,0,0,0.7)";
       });
     </script>
   </body>
