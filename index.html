@@ -2,87 +2,77 @@
 <html>
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>AR Clock Master</title>
-    
-    <!-- Подключаем твои локальные файлы из репозитория -->
+    <title>AR Clock Final</title>
+    <!-- Локальные библиотеки из твоего репозитория -->
     <script src="./aframe.min.js"></script>
     <script src="./mindar.js"></script>
-
     <style>
       body { margin: 0; overflow: hidden; background: #000; width: 100vw; height: 100vh; }
       #ui {
         position: fixed; top: 20px; left: 20px; z-index: 1000;
         color: white; font-family: sans-serif; background: rgba(0,0,0,0.8);
         padding: 15px; border-radius: 12px; pointer-events: none;
-        box-shadow: 0 0 10px rgba(255,255,255,0.2);
       }
-      /* Убираем VR-мусор */
       .a-enter-vr, .a-enter-ar { display: none !important; }
-      video { width: 100% !important; height: 100% !important; object-fit: cover !important; }
     </style>
   </head>
   <body>
-    
-    <div id="ui">ЗАГРУЗКА AR...</div>
+    <div id="ui">ЗАГРУЗКА...</div>
 
     <a-scene 
       mindar-image="imageTargetSrc: ./targets.mind; autoStart: true; uiScanning: yes; uiLoading: no;" 
-      embedded 
-      color-space="sRGB" 
-      renderer="colorManagement: true, physicallyCorrectLights" 
-      vr-mode-ui="enabled: false" 
-      device-orientation-permission-ui="enabled: false">
+      embedded renderer="colorManagement: true, physicallyCorrectLights" 
+      vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
       
       <a-assets>
-        <!-- Твоя 3D модель -->
         <a-asset-item id="clockModel" src="./clock-animation.glb"></a-asset-item>
       </a-assets>
 
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-      <!-- ТАРГЕТ: Он ищет твою картинку -->
+      <!-- ВАЖНО: id="target" должен быть тут! -->
       
+        <!-- ТЕСТОВЫЙ КУБ (удалишь потом) -->
+        <a-box color="red" position="0 0 0.1" scale="0.1 0.1 0.1"></a-box>
         
-        <!-- 1. ТЕСТОВЫЙ КРАСНЫЙ КУБ (если он есть - трекинг работает!) -->
-        <a-box color="#FF0000" position="0 0 0.1" scale="0.2 0.2 0.2"></a-box>
-
-        <!-- 2. ТВОЯ МОДЕЛЬ (увеличил масштаб до 10, если она не видна - пробуй 50) -->
-       <a-gltf-model 
-  src="#clockModel" 
-  position="0 0 0" 
-  scale="0.05 0.05 0.05" 
-  rotation="0 0 0">
-</a-gltf-model>
-
+        <!-- ТВОЯ МОДЕЛЬ (уменьшил масштаб до 0.5) -->
+        <a-gltf-model 
+          src="#clockModel" 
+          position="0 0 0" 
+          scale="0.5 0.5 0.5" 
+          rotation="0 0 0">
+        </a-gltf-model>
       
 
-      <!-- Мощный свет со всех сторон -->
-      <a-light type="ambient" intensity="1.5"></a-light>
-      <a-light type="directional" position="1 2 1" intensity="1"></a-light>
+      <a-light type="ambient" intensity="1.2"></a-light>
+      <a-light type="directional" position="0 1 1" intensity="0.8"></a-light>
     </a-scene>
 
     <script>
-      window.onload = () => {
+      // Используем интервал, чтобы дождаться появления элементов в DOM
+      const checkElements = setInterval(() => {
         const ui = document.getElementById('ui');
-        const sceneEl = document.querySelector('a-scene');
         const targetEl = document.querySelector('#target');
+        const sceneEl = document.querySelector('a-scene');
 
-        ui.innerText = "ИЩУ ЧАСЫ (НАВЕДИТЕ КАМЕРУ)...";
+        if (ui && targetEl && sceneEl) {
+          clearInterval(checkElements); // Элементы найдены, останавливаем поиск
+          
+          ui.innerText = "ИЩУ ЧАСЫ...";
 
-        sceneEl.addEventListener("arReady", () => { console.log("AR Ready"); });
-        sceneEl.addEventListener("arError", () => { ui.innerText = "ОШИБКА КАМЕРЫ"; });
+          targetEl.addEventListener("targetFound", () => {
+            ui.innerText = "ЕСТЬ КОНТАКТ!";
+            ui.style.background = "green";
+          });
 
-        targetEl.addEventListener("targetFound", () => {
-          ui.innerText = "ЕСТЬ КОНТАКТ!";
-          ui.style.background = "#27ae60"; // Зеленый цвет при успехе
-        });
+          targetEl.addEventListener("targetLost", () => {
+            ui.innerText = "ПОТЕРЯНО. ИЩУ СНОВА...";
+            ui.style.background = "rgba(0,0,0,0.8)";
+          });
 
-        targetEl.addEventListener("targetLost", () => {
-          ui.innerText = "ПОТЕРЯНО. ИЩУ ЧАСЫ...";
-          ui.style.background = "rgba(0,0,0,0.8)";
-        });
-      };
+          console.log("AR система инициализирована");
+        }
+      }, 100);
     </script>
   </body>
 </html>
-
