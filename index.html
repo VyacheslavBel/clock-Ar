@@ -63,8 +63,18 @@
             margin: 0 auto;
         }
         
-        /* Убираем серый фон */
-        .a-enter-vr, .a-enter-ar {
+        /* Полное удаление серого фона */
+        .a-scene, .a-canvas, canvas {
+            background-color: transparent !important;
+        }
+        
+        video {
+            object-fit: cover !important;
+            background-color: transparent !important;
+        }
+        
+        /* Убираем все возможные overlay */
+        .a-loader-title, .a-scene-loaded, .a-enter-vr {
             display: none !important;
         }
     </style>
@@ -205,3 +215,4 @@
     </script>
 </body>
 </html>
+
