@@ -1,15 +1,17 @@
 <!DOCTYPE html>
 <html lang="ru">
-
 <head>
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>WebAR Clock Debug</title>
+<title>MindAR Test</title>
 
+<!-- A-Frame -->
 <script src="./aframe.min.js"></script>
-<script src="./mindar.js"></script>
+
+<!-- ВАЖНО: именно этот файл -->
+<script src="./mindar-image-aframe.prod.js"></script>
 
 <style>
 
@@ -25,41 +27,43 @@ position:fixed;
 top:20px;
 left:50%;
 transform:translateX(-50%);
-background:rgba(0,0,0,0.6);
+background:black;
 color:white;
 padding:10px 20px;
-border-radius:10px;
+border-radius:8px;
 z-index:10;
-font-size:16px;
 }
 
-/* таблица debug */
-#debugTable{
+/* debug таблица */
+
+#debug{
+
 position:fixed;
 bottom:20px;
 left:50%;
 transform:translateX(-50%);
 background:white;
 border-collapse:collapse;
-font-size:14px;
-z-index:20;
+z-index:10;
+
 }
 
-#debugTable th,#debugTable td{
+#debug td,#debug th{
+
 border:1px solid #ccc;
 padding:6px 10px;
+
 }
 
 </style>
 
 </head>
 
-
 <body>
 
-<div id="ui">Загрузка...</div>
+<div id="ui">Загрузка AR...</div>
 
-<table id="debugTable">
+<table id="debug">
 
 <tr>
 <th>Параметр</th>
@@ -67,34 +71,25 @@ padding:6px 10px;
 </tr>
 
 <tr>
-<td>Status</td>
-<td id="status">loading</td>
+<td>Camera</td>
+<td id="camera">loading</td>
 </tr>
 
 <tr>
-<td>Model Visible</td>
-<td id="visible">false</td>
+<td>Target</td>
+<td id="targetStatus">searching</td>
 </tr>
 
 <tr>
-<td>Position</td>
-<td id="position">0 0 0</td>
-</tr>
-
-<tr>
-<td>Rotation</td>
-<td id="rotation">0 0 0</td>
-</tr>
-
-<tr>
-<td>Scale</td>
-<td id="scale">0 0 0</td>
+<td>Cube Visible</td>
+<td id="cubeVisible">false</td>
 </tr>
 
 </table>
 
 
 <a-scene
+id="scene"
 mindar-image="imageTargetSrc: ./targets.mind;"
 embedded
 vr-mode-ui="enabled:false"
@@ -105,40 +100,19 @@ renderer="colorManagement:true, physicallyCorrectLights"
 
 <a-camera position="0 0 0" look-controls="enabled:false"></a-camera>
 
-<!-- освещение -->
-<a-light type="ambient" intensity="0.8"></a-light>
+<a-light type="ambient" intensity="1"></a-light>
+
 <a-light type="directional" intensity="1" position="1 2 1"></a-light>
 
 
-<!-- target -->
 <a-entity id="target" mindar-image-target="targetIndex:0">
 
-<!-- DEBUG КУБ (показывает что tracking работает) -->
 <a-box
-id="debugCube"
-position="0 0 0"
-scale="0.2 0.2 0.2"
-color="red">
+id="cube"
+color="red"
+scale="0.3 0.3 0.3"
+position="0 0 0">
 </a-box>
-
-<!-- координатные оси -->
-<a-entity position="0 0 0">
-
-<a-box color="red" scale="0.3 0.02 0.02"></a-box>
-<a-box color="green" scale="0.02 0.3 0.02"></a-box>
-<a-box color="blue" scale="0.02 0.02 0.3"></a-box>
-
-</a-entity>
-
-<!-- 3D модель -->
-<a-gltf-model
-id="clockModel"
-src="./clock-animation.glb"
-position="0 0 0"
-rotation="0 0 0"
-scale="0.5 0.5 0.5"
-animation-mixer>
-</a-gltf-model>
 
 </a-entity>
 
@@ -151,71 +125,49 @@ document.addEventListener("DOMContentLoaded",()=>{
 
 const ui=document.getElementById("ui")
 
-const status=document.getElementById("status")
-const visible=document.getElementById("visible")
-const pos=document.getElementById("position")
-const rot=document.getElementById("rotation")
-const scale=document.getElementById("scale")
+const cameraStatus=document.getElementById("camera")
+const targetStatus=document.getElementById("targetStatus")
+const cubeVisible=document.getElementById("cubeVisible")
 
-const scene=document.querySelector("a-scene")
+const scene=document.querySelector("#scene")
 const target=document.querySelector("#target")
-const model=document.querySelector("#clockModel")
-
-ui.innerText="Ищу часы..."
-status.innerText="searching"
+const cube=document.querySelector("#cube")
 
 
-/* target найден */
-target.addEventListener("targetFound",()=>{
+scene.addEventListener("arReady",()=>{
 
-ui.innerText="Часы найдены!"
-status.innerText="target found"
-
-})
-
-/* target потерян */
-target.addEventListener("targetLost",()=>{
-
-ui.innerText="Ищу часы..."
-status.innerText="lost"
+ui.innerText="AR запущен. Наведи на часы"
+cameraStatus.innerText="ok"
 
 })
 
 
-/* ошибка камеры */
 scene.addEventListener("arError",()=>{
 
 ui.innerText="Ошибка камеры"
-status.innerText="camera error"
+cameraStatus.innerText="error"
 
 })
 
 
-/* обновление координат */
-scene.addEventListener("renderstart",()=>{
+target.addEventListener("targetFound",()=>{
 
-scene.addEventListener("tick",()=>{
-
-if(!model.object3D)return
-
-const p=model.object3D.position
-const r=model.object3D.rotation
-const s=model.object3D.scale
-
-visible.innerText=model.object3D.visible
-
-pos.innerText=`${p.x.toFixed(3)} ${p.y.toFixed(3)} ${p.z.toFixed(3)}`
-rot.innerText=`${(r.x*57.3).toFixed(1)} ${(r.y*57.3).toFixed(1)} ${(r.z*57.3).toFixed(1)}`
-scale.innerText=`${s.x.toFixed(2)} ${s.y.toFixed(2)} ${s.z.toFixed(2)}`
+targetStatus.innerText="found"
+cubeVisible.innerText="true"
 
 })
+
+
+target.addEventListener("targetLost",()=>{
+
+targetStatus.innerText="lost"
+cubeVisible.innerText="false"
 
 })
 
 })
 
 </script>
-
 
 </body>
 </html>
