@@ -16,7 +16,6 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         
-        /* Стили для интерфейса */
         #ui {
             position: fixed;
             top: 20px;
@@ -52,7 +51,16 @@
             color: #000;
         }
         
-        /* Инструкция для пользователя */
+        #ui.debug {
+            background: rgba(0, 0, 0, 0.9);
+            color: #0f0;
+            font-family: monospace;
+            font-size: 14px;
+            max-width: 90%;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        
         .instructions {
             position: fixed;
             bottom: 30px;
@@ -71,174 +79,242 @@
             margin: 0 auto;
             pointer-events: none;
         }
+        
+        #debug-btn {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            z-index: 2000;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            border: none;
+            border-radius: 30px;
+            padding: 10px 20px;
+            font-size: 14px;
+            cursor: pointer;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
     </style>
 </head>
 <body>
-    <!-- Интерфейс статуса -->
     <div id="ui">Загрузка...</div>
     <div class="instructions">Наведите камеру на изображение часов</div>
+    <button id="debug-btn" style="display: none;">🐛 Отладка</button>
 
-    <!-- AR Сцена -->
+    <!-- AR Сцена - исправленная конфигурация -->
     <a-scene 
-        mindar-image="imageTargetSrc: ./targets.mind; maxTrack: 1; filterBeta: 0.001;"
+        mindar-image="imageTargetSrc: ./targets.mind; maxTrack: 1; filterBeta: 0.001; showStats: true;"
         color-space="sRGB"
         embedded
-        renderer="colorManagement: true;"
+        renderer="colorManagement: true; antialias: true; alpha: false;"
         vr-mode-ui="enabled: false"
         device-orientation-permission-ui="enabled: false"
-        gesture-detector
         stats="false"
-        arjs="sourceType: webcam; videoTexture: true; debugUIEnabled: false; trackingMethod: best;"
+        background="color: black"
     >
-        <!-- Камера -->
-        <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+        <!-- Камера с правильными настройками -->
+        <a-camera position="0 0 0" look-controls="enabled: false" wasd-controls="enabled: false"></a-camera>
         
-        <!-- Освещение -->
-        <a-entity light="type: ambient; color: #FFFFFF; intensity: 0.8"></a-entity>
-        <a-entity light="type: directional; color: #FFFFFF; intensity: 1.2; position: 1 2 1"></a-entity>
-        <a-entity light="type: directional; color: #FFF9E6; intensity: 0.8; position: -1 1 0.5"></a-entity>
+        <!-- Освещение - усиленное -->
+        <a-entity light="type: ambient; color: #FFFFFF; intensity: 1.5"></a-entity>
+        <a-entity light="type: directional; color: #FFFFFF; intensity: 2.0; position: 1 2 1"></a-entity>
+        <a-entity light="type: directional; color: #FFF9E6; intensity: 1.5; position: -1 1 0.5"></a-entity>
         
-        <!-- 3D модель часов (привязана к targetIndex 0) -->
+        <!-- 3D модель часов - с запасными параметрами и видимостью по умолчанию -->
         <a-entity 
             mindar-image-target="targetIndex: 0"
-            gltf-model="./clock-animation.glb"
-            scale="1 1 1"
-            position="0 0 0
-            rotation="0 0 0"
-            animation-mixer="clip: *; loop: repeat; timeScale: 1"
             id="clock-model"
-        ></a-entity>
+            position="0 0 0"
+            scale="1 1 1"
+            rotation="0 0 0"
+            visible="true"
+        >
+            <!-- Простая геометрия для теста, если glb не загрузится -->
+            <a-box color="red" depth="0.2" height="0.2" width="0.2" position="0 0.5 0" visible="false" id="test-box"></a-box>
+        </a-entity>
     </a-scene>
 
-    <!-- Логика приложения -->
+    <!-- Логика приложения с расширенной отладкой -->
     <script>
         (function() {
             const uiElement = document.getElementById('ui');
-            let scene = null;
+            const debugBtn = document.getElementById('debug-btn');
+            let modelEntity = null;
+            let testBox = null;
             let mindarSystem = null;
             
-            // Функция обновления статуса
-            function setStatus(text, type = 'info') {
-                uiElement.textContent = text;
-                uiElement.className = ''; // Сброс классов
-                if (type === 'success') {
-                    uiElement.classList.add('success');
-                } else if (type === 'error') {
-                    uiElement.classList.add('error');
-                } else if (type === 'warning') {
-                    uiElement.classList.add('warning');
+            // Функция отладки
+            function debugLog(...args) {
+                console.log('[DEBUG]', ...args);
+                const currentText = uiElement.textContent;
+                if (currentText.length < 100) { // Не переполняем UI
+                    // setStatus(currentText + '\n' + args.join(' '), 'debug');
                 }
             }
             
-            // Ожидание полной загрузки DOM
-            document.addEventListener('DOMContentLoaded', function() {
-                setStatus('Инициализация...');
+            function setStatus(text, type = 'info') {
+                uiElement.textContent = text;
+                uiElement.className = '';
+                if (type === 'success') uiElement.classList.add('success');
+                else if (type === 'error') uiElement.classList.add('error');
+                else if (type === 'warning') uiElement.classList.add('warning');
+                else if (type === 'debug') uiElement.classList.add('debug');
+            }
+            
+            // Проверка наличия всех файлов
+            async function checkFiles() {
+                const files = [
+                    './targets.mind',
+                    './clock-animation.glb',
+                    './aframe.min.js',
+                    './mindar.js'
+                ];
                 
-                // Поиск сцены
-                scene = document.querySelector('a-scene');
+                for (const file of files) {
+                    try {
+                        const response = await fetch(file, { method: 'HEAD' });
+                        if (!response.ok) {
+                            setStatus(`Файл не найден: ${file}`, 'error');
+                            return false;
+                        }
+                    } catch (e) {
+                        setStatus(`Ошибка доступа к ${file}`, 'error');
+                        return false;
+                    }
+                }
+                return true;
+            }
+            
+            document.addEventListener('DOMContentLoaded', async function() {
+                setStatus('Проверка файлов...');
+                
+                // Проверяем наличие файлов
+                const filesOk = await checkFiles();
+                if (!filesOk) return;
+                
+                setStatus('Инициализация AR...');
+                
+                const scene = document.querySelector('a-scene');
                 
                 if (!scene) {
                     setStatus('Ошибка: сцена не найдена', 'error');
                     return;
                 }
                 
-                // Обработчик загрузки сцены MindAR
-                scene.addEventListener('arReady', function(event) {
-                    console.log('MindAR готов к работе');
-                    setStatus('Ищу часы...');
-                    
-                    // Сохраняем ссылку на систему MindAR
-                    mindarSystem = event.detail.system;
+                // Ждем загрузки A-Frame
+                if (!AFRAME) {
+                    setStatus('Ошибка: A-Frame не загружен', 'error');
+                    return;
+                }
+                
+                // Регистрируем компонент для отладки загрузки модели
+                AFRAME.registerComponent('model-debug', {
+                    init: function() {
+                        debugLog('Модель инициализирована');
+                        this.el.addEventListener('model-loaded', () => {
+                            debugLog('Модель успешно загружена');
+                            setStatus('3D модель загружена!', 'success');
+                        });
+                        this.el.addEventListener('model-error', (e) => {
+                            debugLog('Ошибка загрузки модели:', e.detail);
+                            setStatus('Ошибка загрузки 3D модели', 'error');
+                            
+                            // Показываем тестовую геометрию
+                            if (testBox) {
+                                testBox.setAttribute('visible', 'true');
+                                debugLog('Показан тестовый куб');
+                            }
+                        });
+                    }
                 });
                 
-                // Обработчик ошибок AR (камера)
-                scene.addEventListener('arError', function(event) {
-                    console.error('Ошибка AR:', event.detail.error);
+                scene.addEventListener('arReady', function(event) {
+                    debugLog('MindAR готов');
+                    setStatus('Ищу часы...');
+                    mindarSystem = event.detail.system;
                     
-                    let errorMessage = 'Ошибка доступа к камере';
-                    if (event.detail.error && event.detail.error.message) {
-                        if (event.detail.error.message.includes('Permission')) {
-                            errorMessage = 'Нет разрешения на камеру';
-                        } else if (event.detail.error.message.includes('NotFound')) {
-                            errorMessage = 'Камера не найдена';
-                        }
+                    // Показываем кнопку отладки
+                    debugBtn.style.display = 'block';
+                });
+                
+                scene.addEventListener('arError', function(event) {
+                    debugLog('AR ошибка:', event.detail.error);
+                    setStatus('Ошибка камеры: ' + (event.detail.error.message || 'неизвестная'), 'error');
+                });
+                
+                // Поиск модели после загрузки сцены
+                scene.addEventListener('loaded', function() {
+                    modelEntity = document.getElementById('clock-model');
+                    testBox = document.getElementById('test-box');
+                    
+                    if (!modelEntity) {
+                        setStatus('Ошибка: модель не найдена в DOM', 'error');
+                        return;
                     }
                     
-                    setStatus(errorMessage, 'error');
+                    debugLog('Модель найдена в DOM');
                     
-                    // Дополнительная информация для пользователя
-                    setTimeout(() => {
-                        if (uiElement.classList.contains('error')) {
-                            setStatus('Проверьте разрешения и перезагрузите', 'error');
-                        }
-                    }, 3000);
+                    // Добавляем отладочный компонент
+                    modelEntity.setAttribute('model-debug', '');
+                    
+                    // Пытаемся загрузить GLTF модель
+                    modelEntity.setAttribute('gltf-model', './clock-animation.glb');
+                    
+                    // Добавляем анимацию если есть
+                    if (typeof AFRAME.ANIMATION_MIXER !== 'undefined') {
+                        modelEntity.setAttribute('animation-mixer', 'clip: *; loop: repeat;');
+                    }
                 });
                 
-                // Поиск целевого изображения (часов)
+                // События цели
                 const target = document.querySelector('[mindar-image-target]');
-                
                 if (target) {
-                    // Событие обнаружения цели
-                    target.addEventListener('targetFound', function(event) {
-                        console.log('Цель найдена!');
+                    target.addEventListener('targetFound', function() {
+                        debugLog('Цель найдена!');
                         setStatus('Часы найдены! ✓', 'success');
                         
-                        // Небольшая вибрация, если поддерживается (опционально)
-                        if (navigator.vibrate) {
-                            navigator.vibrate(50);
+                        // Принудительно показываем модель
+                        if (modelEntity) {
+                            modelEntity.setAttribute('visible', 'true');
+                            debugLog('Модель видима: установлено true');
                         }
+                        
+                        if (navigator.vibrate) navigator.vibrate(50);
                     });
                     
-                    // Событие потери цели
-                    target.addEventListener('targetLost', function(event) {
-                        console.log('Цель потеряна');
+                    target.addEventListener('targetLost', function() {
+                        debugLog('Цель потеряна');
                         setStatus('Ищу часы...');
                     });
-                } else {
-                    console.warn('Элемент mindar-image-target не найден');
                 }
                 
-                // Дополнительная проверка на наличие библиотек
-                if (typeof AFRAME === 'undefined') {
-                    setStatus('Ошибка: A-Frame не загружен', 'error');
-                } else if (typeof window.MINDAR === 'undefined') {
-                    setStatus('Ошибка: MindAR не загружен', 'error');
-                }
-                
-                // Таймаут для отлова зависаний
-                setTimeout(() => {
-                    if (uiElement.textContent === 'Загрузка...' || uiElement.textContent === 'Инициализация...') {
-                        setStatus('Проверьте камеру и маркер', 'warning');
+                // Дополнительная проверка видимости
+                setInterval(() => {
+                    if (modelEntity) {
+                        const visible = modelEntity.getAttribute('visible');
+                        debugLog('Модель видима:', visible);
                     }
-                }, 10000);
+                }, 5000);
             });
             
-            // Обработка ошибок загрузки ресурсов
+            // Кнопка отладки
+            debugBtn.addEventListener('click', function() {
+                const modelEntity = document.getElementById('clock-model');
+                if (modelEntity) {
+                    alert('Модель: ' + modelEntity.getAttribute('visible') + 
+                          '\nПозиция: ' + JSON.stringify(modelEntity.getAttribute('position')) +
+                          '\nМасштаб: ' + JSON.stringify(modelEntity.getAttribute('scale')));
+                }
+            });
+            
+            // Обработка ошибок загрузки
             window.addEventListener('error', function(event) {
                 if (event.target.tagName === 'SCRIPT' || event.target.tagName === 'LINK') {
-                    console.error('Ошибка загрузки ресурса:', event.target.src || event.target.href);
-                    setStatus('Ошибка загрузки библиотек', 'error');
+                    setStatus('Ошибка загрузки: ' + (event.target.src || event.target.href), 'error');
                 }
             }, true);
-            
-            // Дополнительная проверка на доступ к камере (для старых браузеров)
-            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                setStatus('Ваш браузер не поддерживает камеру', 'error');
-            }
         })();
     </script>
-    
-    <!-- Комментарий по настройке модели -->
-    <!-- 
-        Настройка 3D модели:
-        - scale: масштаб модели (0.5 0.5 0.5) - можно менять
-        - position: смещение модели (0 0 0) - можно менять
-        - rotation: поворот модели (0 0 0) - можно менять
-        - animation-mixer: управление анимацией (clip: * - все анимации)
-        
-        Для изменения положения модели относительно маркера,
-        измените атрибуты position, scale, rotation у элемента с id="clock-model"
-    -->
 </body>
 </html>
-
