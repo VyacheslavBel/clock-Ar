@@ -1,101 +1,221 @@
 <!DOCTYPE html>
 <html lang="ru">
+
 <head>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WebAR Clock</title>
 
-<!-- Локальные библиотеки -->
+<title>WebAR Clock Debug</title>
+
 <script src="./aframe.min.js"></script>
 <script src="./mindar.js"></script>
 
 <style>
-  body {
-    margin:0;
-    overflow:hidden;
-    font-family: Arial, sans-serif;
-  }
 
-  #ui {
-    position: fixed;
-    top:20px;
-    left:50%;
-    transform:translateX(-50%);
-    background:rgba(0,0,0,0.6);
-    color:white;
-    padding:10px 18px;
-    border-radius:10px;
-    font-size:16px;
-    z-index:10;
-  }
+body{
+margin:0;
+overflow:hidden;
+font-family:Arial;
+}
+
+/* статус */
+#ui{
+position:fixed;
+top:20px;
+left:50%;
+transform:translateX(-50%);
+background:rgba(0,0,0,0.6);
+color:white;
+padding:10px 20px;
+border-radius:10px;
+z-index:10;
+font-size:16px;
+}
+
+/* таблица debug */
+#debugTable{
+position:fixed;
+bottom:20px;
+left:50%;
+transform:translateX(-50%);
+background:white;
+border-collapse:collapse;
+font-size:14px;
+z-index:20;
+}
+
+#debugTable th,#debugTable td{
+border:1px solid #ccc;
+padding:6px 10px;
+}
+
 </style>
+
 </head>
+
 
 <body>
 
 <div id="ui">Загрузка...</div>
 
+<table id="debugTable">
+
+<tr>
+<th>Параметр</th>
+<th>Значение</th>
+</tr>
+
+<tr>
+<td>Status</td>
+<td id="status">loading</td>
+</tr>
+
+<tr>
+<td>Model Visible</td>
+<td id="visible">false</td>
+</tr>
+
+<tr>
+<td>Position</td>
+<td id="position">0 0 0</td>
+</tr>
+
+<tr>
+<td>Rotation</td>
+<td id="rotation">0 0 0</td>
+</tr>
+
+<tr>
+<td>Scale</td>
+<td id="scale">0 0 0</td>
+</tr>
+
+</table>
+
+
 <a-scene
-  mindar-image="imageTargetSrc: ./targets.mind;"
-  color-space="sRGB"
-  renderer="colorManagement: true, physicallyCorrectLights"
-  vr-mode-ui="enabled: false"
-  device-orientation-permission-ui="enabled: false"
-  embedded
+mindar-image="imageTargetSrc: ./targets.mind;"
+embedded
+vr-mode-ui="enabled:false"
+device-orientation-permission-ui="enabled:false"
+color-space="sRGB"
+renderer="colorManagement:true, physicallyCorrectLights"
 >
 
-  <!-- Камера -->
-  <a-camera position="0 0 0" look-controls="enabled:false"></a-camera>
+<a-camera position="0 0 0" look-controls="enabled:false"></a-camera>
 
-  <!-- Освещение -->
-  <a-light type="ambient" intensity="0.8"></a-light>
-  <a-light type="directional" intensity="0.9" position="1 2 1"></a-light>
+<!-- освещение -->
+<a-light type="ambient" intensity="0.8"></a-light>
+<a-light type="directional" intensity="1" position="1 2 1"></a-light>
 
-  <!-- Target -->
-  <a-entity mindar-image-target="targetIndex: 0">
 
-      <!-- 3D модель -->
-      <a-gltf-model
-        id="clockModel"
-        src="./clock-animation.glb"
-        position="0 0 0"
-        scale="0.5 0.5 0.5"
-        rotation="0 0 0"
-        animation-mixer>
-      </a-gltf-model>
+<!-- target -->
+<a-entity id="target" mindar-image-target="targetIndex:0">
 
-  </a-entity>
+<!-- DEBUG КУБ (показывает что tracking работает) -->
+<a-box
+id="debugCube"
+position="0 0 0"
+scale="0.2 0.2 0.2"
+color="red">
+</a-box>
+
+<!-- координатные оси -->
+<a-entity position="0 0 0">
+
+<a-box color="red" scale="0.3 0.02 0.02"></a-box>
+<a-box color="green" scale="0.02 0.3 0.02"></a-box>
+<a-box color="blue" scale="0.02 0.02 0.3"></a-box>
+
+</a-entity>
+
+<!-- 3D модель -->
+<a-gltf-model
+id="clockModel"
+src="./clock-animation.glb"
+position="0 0 0"
+rotation="0 0 0"
+scale="0.5 0.5 0.5"
+animation-mixer>
+</a-gltf-model>
+
+</a-entity>
 
 </a-scene>
 
 
 <script>
-document.addEventListener("DOMContentLoaded", () => {
 
-  const ui = document.getElementById("ui");
-  const scene = document.querySelector("a-scene");
-  const target = document.querySelector('[mindar-image-target]');
+document.addEventListener("DOMContentLoaded",()=>{
 
-  ui.innerText = "Ищу часы...";
+const ui=document.getElementById("ui")
 
-  // цель найдена
-  target.addEventListener("targetFound", () => {
-      ui.innerText = "Часы найдены!";
-  });
+const status=document.getElementById("status")
+const visible=document.getElementById("visible")
+const pos=document.getElementById("position")
+const rot=document.getElementById("rotation")
+const scale=document.getElementById("scale")
 
-  // цель потеряна
-  target.addEventListener("targetLost", () => {
-      ui.innerText = "Ищу часы...";
-  });
+const scene=document.querySelector("a-scene")
+const target=document.querySelector("#target")
+const model=document.querySelector("#clockModel")
 
-  // ошибка AR (например нет камеры)
-  scene.addEventListener("arError", () => {
-      ui.innerText = "Ошибка доступа к камере";
-      console.error("AR Error: нет доступа к камере или WebXR");
-  });
+ui.innerText="Ищу часы..."
+status.innerText="searching"
 
-});
+
+/* target найден */
+target.addEventListener("targetFound",()=>{
+
+ui.innerText="Часы найдены!"
+status.innerText="target found"
+
+})
+
+/* target потерян */
+target.addEventListener("targetLost",()=>{
+
+ui.innerText="Ищу часы..."
+status.innerText="lost"
+
+})
+
+
+/* ошибка камеры */
+scene.addEventListener("arError",()=>{
+
+ui.innerText="Ошибка камеры"
+status.innerText="camera error"
+
+})
+
+
+/* обновление координат */
+scene.addEventListener("renderstart",()=>{
+
+scene.addEventListener("tick",()=>{
+
+if(!model.object3D)return
+
+const p=model.object3D.position
+const r=model.object3D.rotation
+const s=model.object3D.scale
+
+visible.innerText=model.object3D.visible
+
+pos.innerText=`${p.x.toFixed(3)} ${p.y.toFixed(3)} ${p.z.toFixed(3)}`
+rot.innerText=`${(r.x*57.3).toFixed(1)} ${(r.y*57.3).toFixed(1)} ${(r.z*57.3).toFixed(1)}`
+scale.innerText=`${s.x.toFixed(2)} ${s.y.toFixed(2)} ${s.z.toFixed(2)}`
+
+})
+
+})
+
+})
+
 </script>
+
 
 </body>
 </html>
